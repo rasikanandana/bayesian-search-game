@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="A simple bilingual Sinhala-English Bayesian search theory learning game." />
+  <title>Bayesian Search Game | Sinhala + English</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 20px;
+      color: #222;
+    }
+
+    .app {
+      max-width: 980px;
+      margin: auto;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+    }
+
+    h1, h2 {
+      margin-top: 0;
+    }
+
+    .subtitle {
+      color: #555;
+      margin-top: -8px;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .controls label {
+      font-size: 15px;
+      color: #333;
+    }
+
+    input[type="range"] {
+      width: 180px;
+    }
+
+    .places {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .place {
+      border: 2px solid #ddd;
+      border-radius: 14px;
+      padding: 14px;
+      background: #fafafa;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .place:hover {
+      transform: translateY(-2px);
+      border-color: #777;
+    }
+
+    .place.searched {
+      opacity: 0.75;
+    }
+
+    .emoji {
+      font-size: 34px;
+    }
+
+    .prob {
+      font-size: 24px;
+      font-weight: bold;
+      margin: 8px 0;
+    }
+
+    .bar {
+      height: 12px;
+      background: #ddd;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .fill {
+      height: 100%;
+      background: #333;
+      width: 0%;
+    }
+
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 4px;
+      background: #222;
+      color: white;
+    }
+
+    button.secondary {
+      background: #e2e2e2;
+      color: #222;
+    }
+
+    .message {
+      font-size: 18px;
+      line-height: 1.5;
+    }
+
+    .small {
+      color: #666;
+      font-size: 14px;
+    }
+
+    .formula {
+      background: #f3f3f3;
+      padding: 12px;
+      border-radius: 10px;
+      font-family: Consolas, monospace;
+      overflow-x: auto;
+      line-height: 1.55;
+    }
+
+    .win {
+      background: #e8ffe8;
+      border-left: 6px solid #22aa44;
+    }
+
+    .miss {
+      background: #fff7e6;
+      border-left: 6px solid #ffaa00;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+    }
+
+    ol, ul {
+      padding-left: 22px;
+    }
+
+    code {
+      background: #f1f1f1;
+      padding: 2px 5px;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="card">
+      <h1>Bayesian Search Game</h1>
+      <p class="subtitle">A simple Sinhala + English game to learn Bayesian search theory</p>
+
+      <div class="two-col">
+        <div>
+          <h2>සිංහල උපදෙස්</h2>
+          <p class="message">
+            ඔබේ යතුර නැතිවෙලා. යතුර තැන 4කින් එකක තියෙනවා. Hidden key එක probability අනුවම තෝරනවා.
+            වැඩිම probability තියෙන තැන search කරන්න. හමු නොවුනොත් probabilities update වෙන්නේ Bayes' formula එකෙන්.
+          </p>
+          <p class="small">
+            Detection probability කියන්නේ: “යතුර ඇත්තටම ඒ තැන තියෙනවා නම්, search කළාම හොයාගන්න chance එක”.
+            100% නෙමෙයි, මොකද හොඳට බැලුවත් සමහර විට miss වෙන්න පුළුවන්.
+          </p>
+        </div>
+
+        <div>
+          <h2>English Instructions</h2>
+          <p class="message">
+            You lost a key. The key is hidden in one of four places. The hidden place is selected using the shown probabilities.
+            Search the place with the highest probability first. If you do not find the key, the probabilities are updated using Bayes' formula.
+          </p>
+          <p class="small">
+            Detection probability means: “If the key is really in the place you searched, what is the chance that your search will find it?”
+            It is not always 100%, because even a careful search can miss the key.
+          </p>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button onclick="newGame()">New Game</button>
+        <button class="secondary" onclick="showHint()">Hint</button>
+        <label for="detectSlider">Detection probability:</label>
+        <input id="detectSlider" type="range" min="50" max="100" value="75" step="5" oninput="changeDetectionProbability()" />
+        <strong id="detectValue">75%</strong>
+      </div>
+    </div>
+
+    <div id="result" class="card message">
+      Game එක පටන් ගන්න. වැඩිම probability තියෙන තැන click කරන්න.<br>
+      Start the game. Click the place with the highest probability.
+    </div>
+
+    <div class="card">
+      <h2>Search Places / සොයන තැන්</h2>
+      <div class="places" id="places"></div>
+    </div>
+
+    <div class="card">
+      <h2>Bayes Update / Bayes ගණනය</h2>
+      <div id="formula" class="formula">
+        Search එකක් කළාම මෙතන calculation එක පෙන්වයි.<br>
+        The calculation will appear here after a search.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Learning Note / ඉගෙනගන්න කරුණ</h2>
+      <div class="two-col">
+        <p>
+          SS Central America නෞකාව සොයද්දීත් මේ වගේම අදහසක් භාවිත කළා. වෙනස තමයි මෙතන යතුරක්. එතන නැවක්.
+          මෙතන ගෙදර තැන්. එතන මුහුදු කලාප. Search කළත් හමු නොවුනොත්, ඒ තොරතුර භාවිත කරලා ඊළඟට සොයන්න ඕන තැන ගණනය කරනවා.
+        </p>
+        <p>
+          A similar idea was used in the search for the SS Central America. Here we search for a key; there they searched for a shipwreck.
+          Here the locations are places in a house; there the locations were ocean search areas. A failed search is still useful information, because it helps update the next best place to search.
+        </p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>How to publish on GitHub Pages</h2>
+      <ol>
+        <li>Create a new GitHub repository, for example <code>bayesian-search-game</code>.</li>
+        <li>Create a file named <code>index.html</code>.</li>
+        <li>Copy this full code into <code>index.html</code> and commit it.</li>
+        <li>Go to <code>Settings → Pages</code>.</li>
+        <li>Under <code>Build and deployment</code>, choose <code>Deploy from a branch</code>.</li>
+        <li>Select the <code>main</code> branch and <code>/root</code> folder, then save.</li>
+        <li>After a short time, GitHub will give you a public website link.</li>
+      </ol>
+    </div>
+  </div>
+
+  <script>
+    const originalPlaces = [
+      { name: "මේසය / Table", emoji: "🪑", probability: 40, searched: false },
+      { name: "බෑග් එක / Bag", emoji: "🎒", probability: 30, searched: false },
+      { name: "කාර් එක / Car", emoji: "🚗", probability: 20, searched: false },
+      { name: "සොෆා එක / Sofa", emoji: "🛋️", probability: 10, searched: false }
+    ];
+
+    let places = [];
+    let hiddenKeyIndex = 0;
+    let attempts = 0;
+    let gameOver = false;
+    let detectionProbability = 0.75;
+
+    function newGame() {
+      places = JSON.parse(JSON.stringify(originalPlaces));
+      hiddenKeyIndex = chooseHiddenKeyByProbability();
+      attempts = 0;
+      gameOver = false;
+      document.getElementById("result").className = "card message";
+      document.getElementById("result").innerHTML = "Game එක පටන් ගත්තා. වැඩිම probability තියෙන තැන search කරන්න.<br>Game started. Search the place with the highest probability.";
+      document.getElementById("formula").innerHTML = "Search එකක් කළාම මෙතන calculation එක පෙන්වයි.<br>The calculation will appear here after a search.";
+      renderPlaces();
+    }
+
+    function chooseHiddenKeyByProbability() {
+      const r = Math.random() * 100;
+      let cumulative = 0;
+      for (let i = 0; i < places.length; i++) {
+        cumulative += places[i].probability;
+        if (r <= cumulative) return i;
+      }
+      return places.length - 1;
+    }
+
+    function changeDetectionProbability() {
+      const value = Number(document.getElementById("detectSlider").value);
+      detectionProbability = value / 100;
+      document.getElementById("detectValue").innerText = value + "%";
+    }
+
+    function renderPlaces() {
+      const container = document.getElementById("places");
+      container.innerHTML = "";
+
+      places.forEach((place, index) => {
+        const div = document.createElement("div");
+        div.className = "place" + (place.searched ? " searched" : "");
+        div.onclick = () => searchPlace(index);
+        div.innerHTML = `
+          <div class="emoji">${place.emoji}</div>
+          <h3>${place.name}</h3>
+          <div class="prob">${place.probability.toFixed(1)}%</div>
+          <div class="bar"><div class="fill" style="width:${place.probability}%"></div></div>
+          <p class="small">${place.searched ? "කලින් සෙව්වා / Searched before" : "Click to search / සොයන්න click කරන්න"}</p>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function searchPlace(index) {
+      if (gameOver) return;
+
+      attempts++;
+      const result = document.getElementById("result");
+
+      if (index === hiddenKeyIndex) {
+        const foundThisTime = Math.random() < detectionProbability;
+
+        if (foundThisTime) {
+          gameOver = true;
+          result.className = "card message win";
+          result.innerHTML = `✅ හරි! යතුර තිබුණේ <b>${places[index].name}</b> තුළ. ඔබ attempts ${attempts}කින් හොයාගත්තා.<br>Correct! The key was in <b>${places[index].name}</b>. You found it in ${attempts} attempt(s).`;
+          places[index].searched = true;
+          renderPlaces();
+          return;
+        }
+      }
+
+      const oldProbability = places[index].probability;
+      updateProbabilitiesByBayes(index, oldProbability);
+      places[index].searched = true;
+
+      result.className = "card message miss";
+      result.innerHTML = `❌ ${places[index].name} තුළ search කළා. යතුර හමු වුනේ නැහැ. දැන් Bayes' formula එකෙන් probabilities update කළා.<br>You searched ${places[index].name}, but did not find the key. The probabilities have now been updated using Bayes' formula.`;
+      renderPlaces();
+    }
+
+    function updateProbabilitiesByBayes(searchedIndex, oldProbabilityPercent) {
+      const prior = oldProbabilityPercent / 100;
+      const detect = detectionProbability;
+      const probabilityOfNotFinding = 1 - (prior * detect);
+
+      places.forEach((place, i) => {
+        const placePrior = place.probability / 100;
+
+        if (i === searchedIndex) {
+          place.probability = ((placePrior * (1 - detect)) / probabilityOfNotFinding) * 100;
+        } else {
+          place.probability = (placePrior / probabilityOfNotFinding) * 100;
+        }
+      });
+
+      normalizeSmallRoundingErrors();
+      showFormula(searchedIndex, prior, detect, probabilityOfNotFinding);
+    }
+
+    function normalizeSmallRoundingErrors() {
+      const total = places.reduce((sum, p) => sum + p.probability, 0);
+      const difference = 100 - total;
+      let maxIndex = 0;
+      places.forEach((p, i) => {
+        if (p.probability > places[maxIndex].probability) maxIndex = i;
+      });
+      places[maxIndex].probability += difference;
+    }
+
+    function showFormula(searchedIndex, prior, detect, probabilityOfNotFinding) {
+      const searchedName = places[searchedIndex].name;
+      const afterSearched = ((prior * (1 - detect)) / probabilityOfNotFinding) * 100;
+
+      document.getElementById("formula").innerHTML = `
+        Searched place / සෙව් තැන: ${searchedName}<br><br>
+        Prior probability / මුල් probability = ${(prior * 100).toFixed(1)}%<br>
+        Detection probability / හොයාගැනීමේ probability = ${(detect * 100).toFixed(1)}%<br><br>
+        P(not found) = 1 - Prior × Detection<br>
+        P(not found) = 1 - ${prior.toFixed(3)} × ${detect.toFixed(3)} = ${probabilityOfNotFinding.toFixed(3)}<br><br>
+        Updated probability for searched place:<br>
+        සෙව් තැන සඳහා අලුත් probability:<br><br>
+        P(${searchedName} | not found) = Prior × (1 - Detection) / P(not found)<br>
+        P(${searchedName} | not found) = ${prior.toFixed(3)} × ${(1 - detect).toFixed(3)} / ${probabilityOfNotFinding.toFixed(3)}<br>
+        = ${afterSearched.toFixed(1)}%
+      `;
+    }
+
+    function showHint() {
+      if (gameOver) return;
+      let maxIndex = 0;
+      places.forEach((p, i) => {
+        if (p.probability > places[maxIndex].probability) maxIndex = i;
+      });
+      document.getElementById("result").className = "card message";
+      document.getElementById("result").innerHTML = `💡 Hint: Bayesian idea අනුව ඊළඟට බලන්න හොඳම තැන <b>${places[maxIndex].name}</b>.<br>Hint: According to the Bayesian idea, the best next place to search is <b>${places[maxIndex].name}</b>.`;
+    }
+
+    newGame();
+  </script>
+</body>
+</html>
